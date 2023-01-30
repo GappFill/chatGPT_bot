@@ -1,8 +1,9 @@
 # Файл для работы с базой данных
 
-import pymysql
-import cryptography
+# import pymysql
+# import cryptography
 import time
+import sqlite3
 
 
 def connect():  # Подключаемся к базе данных
@@ -20,16 +21,50 @@ def connect():  # Подключаемся к базе данных
     else:
         return cursor, conn
 
-def insert():
+def insert_new_user(user_id, user_name, date):
     """Добавляет пользователя в базу данных"""
-    pass
+    try:
+        with sqlite3.connect(r'database/users.db') as db:
+            cursor = db.cursor()
+            cursor.execute(
+                """INSERT INTO users(id, user_id, user_name, count, date) VALUES(?, ?, ?, ?, ?)""",
+                (None, user_id, user_name, 5, date))
+            return 1  # if the user was added
+    except Exception as err:
+        print(err)
+        return 2  # if the user wasn't added
 
 
-def check_user():
-    '''Проверяем пользователя на оплату'''
-     pass
+def check_count(user_id):
+    '''Смотрим сколько у пользователя использований доступно'''
+    try:
+        with sqlite3.connect(r'database/users.db') as db:
+            cursor = db.cursor()
+            cursor.execute(f"""SELECT count FROM users WHERE user_id={user_id}""",)
+            return cursor.fetchone()  # if the user was added
+    except Exception as err:
+        print(err)
+        return 2  # if the user wasn't added
+
+def update_count(user_id, new_count):
+    '''Обновляем количество использований'''
+    try:
+        with sqlite3.connect(r'database/users.db') as db:
+            cursor = db.cursor()
+            cursor.execute(f"""UPDATE users SET count={new_count} WHERE user_id={user_id}""",)
+    except Exception as err:
+        print(err)
+        return 2  # if the user wasn't added
 
 
-def change_status():
-    """Меняем статус пользователя"""
-    pass
+def check_date(user_id):
+    '''Смотрим сколько у пользователя использований доступно'''
+    try:
+        with sqlite3.connect(r'database/users.db') as db:
+            cursor = db.cursor()
+            cursor.execute(f"""SELECT date FROM users WHERE user_id={user_id}""",)
+            return cursor.fetchone()  # if the user was added
+    except Exception as err:
+        print(err)
+        return 2  # if the user wasn't added
+
