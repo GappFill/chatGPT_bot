@@ -4,6 +4,7 @@ from datetime import datetime
 import openai
 import work_db
 
+import time
 
 from dotenvy import load_env, read_file
 from os import environ
@@ -12,16 +13,27 @@ openai.api_key = environ.get('OPENAI_API_KEY')
 SHOP_API_TOKEN = environ.get('SHOP_API_TOKEN')
 
 
+def days_to_seconds(days):
+    return days*24*60*60
+
 async def start(message: types.Message):
-    await message.reply("Отправьте конкретный и детальный вопрос, чтобы получить самый релевантный ответ")
+    await bot.send_message(message.from_user.id,
+                        f"🔍 Задайте мне вопрос!\n\n"
+                        f"Постарайтесь включить в поисковый запрос конкретику.\n"
+                        f"Чем детальней вопрос, тем релевантней ответ")
+    work_db.insert_new_user(message.from_user.id, message.from_user.username, datetime.now().strftime("%d-%m-%Y "), 0)  # Записывает пользователя ы базу данных
+    await bot.delete_message(message.from_user.id, message.message_id)  # Удаляет сообщение страт
+
+
+
+async def pay(message: types.Message):  # Функция оплаты платежа
     await bot.send_invoice(chat_id=message.from_user.id,
                            title='Оплата',
-                           description='test',
-                           payload='5_counts',
+                           description='14 дневная подписка',
+                           payload='14_days',
                            currency='RUB',
-                           prices=[{'label':' Руб', 'amount':9000}],
-                           provider_token=SHOP_API_TOKEN,)
-    work_db.insert_new_user(message.from_user.id, message.from_user.username, datetime.now().strftime("%d-%m-%Y "))
+                           prices=[{'label': ' Руб', 'amount': 9000}],
+                           provider_token=SHOP_API_TOKEN, )
 
 @dp.pre_checkout_query_handler()
 async def pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
@@ -29,35 +41,52 @@ async def pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
 
 
 async def process_pay(message: types.Message):
-    if message.successful_payment.invoice_payload == '5_counts':
-        await bot.send_photo(chat_id=message.from_user.id,
-                             photo=open('telegram-premium-logo.png', 'rb'),
-                             caption='Оплата прошла')
-        #await bot.send_message(chat_id=message.from_user.id, text="Оплата прошла")
+    if message.successful_payment.invoice_payload == '14_days':
+        time_sub = int(time.time()) + int(days_to_seconds(14))
+        sub_counter = work_db.get_sub(message.from_user.id)[0] + 1
+        work_db.update_sub(message.from_user.id,time_sub, sub_counter)  # Update time sub after succes pay
+        await bot.send_message(message.from_user.id,
+                               f"🔍 Задайте мне вопрос!\n\n"
+                               f"Постарайтесь включить в поисковый запрос конкретику.\n"
+                               f"Чем детальней вопрос, тем релевантней ответ")
 
 
 
 async def bot_answer_from_openai(message: types.Message):
-    count = work_db.check_count(message.from_user.id)[0]  # Получить количество доступных использований
-    if 0 < count <= 5:
-        msg_text = await bot.send_message(chat_id=message.from_user.id, text="ChatGPT генерирут ответ на Ваше сообщение, подождите...")
+    # Получить количество доступных использований
+    if work_db.check_sub(message.from_user.id):
         msg_stiker = await bot.send_sticker(message.chat.id,
                                      'CAACAgIAAxkBAAEGRIFjYDB2O_zAbzSB6kCUIrfPqdk8TgACIwADKA9qFCdRJeeMIKQGKgQ')
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=message.text,
-            temperature=0.5,
-            max_tokens=1000,
-            top_p=1.0,
-            frequency_penalty=0.5,
-            presence_penalty=0.0,
-        )
-        await msg_text.delete()
-        await msg_stiker.delete()
-        await bot.send_message(chat_id=message.from_user.id, text=response['choices'][0]['text'])
-        work_db.update_count(message.from_user.id, count-1)
+        try:
+            response = openai.Completion.create(
+                model="text-davinci-003",
+                prompt=message.text,
+                temperature=0.5,
+                max_tokens=1000,
+                top_p=1.0,
+                frequency_penalty=0.5,
+                presence_penalty=0.0,
+            )
+            await msg_stiker.delete()
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text=response['choices'][0]['text'])
+        except:
+            await msg_stiker.delete()
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text="Сервер chatGPT перегружен")
     else:
-        await bot.send_message(chat_id=message.from_user.id, text='Ссори примогемы закончились')  # Выводится если у пользователя закончились использования
+        if work_db.get_sub(message.from_user.id)[1] > 0:
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text='Ваша подписка закончилась')
+        else:
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text='🥸 Чтобы начать пользоваться\n'
+                                  'поиском нового поколения\n'
+                                  'купите подписку\n'
+                                  '14 дней безлимитного поиска всего за\n 99 рублей.'
+                                  'Результат удивит или мы вернем вам деньги!\n'
+                                  'По административным вопросам:\n @ochulaevskii') # Выводится если у пользователя закончились использования
+        await pay(message)
 
 
 
