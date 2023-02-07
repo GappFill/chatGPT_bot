@@ -12,7 +12,7 @@ async def check_message(message: types.Message):
     else:
         print(message.content_type)  # Показывает тип сообщения
         await bot.send_message(message.chat.id,
-                               "Пока я могу обрабатывать только текст")
+                               "🥸 Пока я могу обрабатывать только текст")
         await bot.delete_message(message.chat.id, message.message_id)
 
 

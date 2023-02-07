@@ -1,46 +1,31 @@
-import json
-from yookassa import Configuration, Payment
-from os import environ
-from dotenvy import load_env, read_file
-import asyncio
-
-load_env(read_file('.env'))
-Configuration.account_id = environ.get('SHOP_ID')
-Configuration.secret_key = environ.get('SHOP_API_TOKEN')
-
-def payment(value,description):
-	payment = Payment.create({
-    "amount": {
-        "value": value,
-        "currency": "RUB"
-    },
-    "payment_method_data": {
-        "type": "bank_card"
-    },
-    "confirmation": {
-        "type": "redirect",
-        "return_url": "урл редиректа"
-    },
-    "capture": True,
-    "description": description
-	})
-	return json.loads(payment.json())
+import openai
+def chatGPT_response(query):
+    try:
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=query,
+            temperature=0.5,
+            max_tokens=1000,
+            top_p=1.0,
+            frequency_penalty=0.5,
+            presence_penalty=0.0,
+        )
+        return response['choices'][0]['text']
+    except:
+        return "Сервер chatGPT перегружен"
 
 
-async def check_payment(payment_id):
-	payment = json.loads((Payment.find_one(payment_id)).json())
-	while payment['status'] == 'pending':
-		payment = json.loads((Payment.find_one(payment_id)).json())
-		await asyncio.sleep(3)
-
-	if payment['status']=='succeeded':
-		print("SUCCSESS RETURN")
-		print(payment)
-		return True
-	else:
-		print("BAD RETURN")
-		print(payment)
-		return False
+def days_to_seconds(days):
+    return days*24*60*60
 
 
-#print(payment('59','Оплата услуги'))
+def create_mask(text):
+    new_text = ''
+    text_len = len(text)
+    if text_len > 150:
+        new_text = text[:150]
+        for i in range(150,text_len+1):
+            new_text = new_text + '$'
+        return new_text
+    else:
+        return text
