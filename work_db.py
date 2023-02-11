@@ -62,14 +62,10 @@ def check_subscription(user_id):
         cursor = connect()
         cursor[0].execute(f"""SELECT expired_date, trial_request FROM Transactions WHERE user_id={user_id}""",)
         all =  cursor[0].fetchone()
-        if all[1] == True:  # Есть ли у пользователя пробная подписка
-            cursor[0].execute(f"UPDATE Transactions SET trial_request = {False} WHERE user_id={user_id}")
-            cursor[1].commit()
-            #return 'Test'
-        elif int(all[0]) > int(time.time()):  # Есть ли подписка
+        if int(all[0]) > int(time.time()):  # Есть ли подписка
             return True  # У пользователя есть подписка
         elif int(all[0]) > 0:
-            return 3
+            return 3  # Была но закончилась
         else:
             return False  # У пользователя нет подписки
     except Exception as err:  # Пользователь не зарегестриован

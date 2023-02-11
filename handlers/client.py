@@ -81,15 +81,11 @@ async def bot_answer_from_openai(message: types.Message):
         await msg_stiker.delete()
 
     elif response == 0:
-        await pay(message)
-
-    elif response == 'Test':
         msg_stiker = await bot.send_sticker(message.chat.id,
                                             'CAACAgIAAxkBAAEGRIFjYDB2O_zAbzSB6kCUIrfPqdk8TgACIwADKA9qFCdRJeeMIKQGKgQ')
         await bot.send_message(chat_id=message.from_user.id,
                                text=useful.create_mask(chatGPT_response(message.text)))
         await msg_stiker.delete()
-        await pay(message)
 
     elif response == 3:
         await bot.send_message(message.from_user.id, '🥸 Ваша подписка закончилась!\n Продлите подписку, чтобы пользоваться поиском нового поколения',
