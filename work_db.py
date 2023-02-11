@@ -65,7 +65,7 @@ def check_subscription(user_id):
         if all[1] == True:  # Есть ли у пользователя пробная подписка
             cursor[0].execute(f"UPDATE Transactions SET trial_request = {False} WHERE user_id={user_id}")
             cursor[1].commit()
-            return 'Test'
+            #return 'Test'
         elif int(all[0]) > int(time.time()):  # Есть ли подписка
             return True  # У пользователя есть подписка
         elif int(all[0]) > 0:
