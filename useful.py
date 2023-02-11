@@ -24,8 +24,10 @@ def create_mask(text):
     text_len = len(text)
     if text_len > 150:
         new_text = text[:150]
-        for i in range(150,text_len+1):
-            new_text = new_text + '$'
+        for i in text[150:]:
+            if i == ' ':
+                new_text = new_text + i
+            new_text = new_text + '*'
         return new_text
     else:
         return text

@@ -1,7 +1,7 @@
 # Файл для работы с базой данных
 
-# import pymysql
-# import cryptography
+import pymysql
+import cryptography
 import time
 import sqlite3
 
@@ -9,9 +9,9 @@ import sqlite3
 def connect():  # Подключаемся к базе данных
     try:
         conn = pymysql.connect(
-            host="188.225.25.80",
+            host="81.200.144.220",
             user="gen_user",
-            passwd="ix8i9u9ab2",
+            passwd="1ly8czoqk6",
             db="default_db",
             port=3306
         )
@@ -21,50 +21,57 @@ def connect():  # Подключаемся к базе данных
     else:
         return cursor, conn
 
-def insert_new_user(user_id, user_name, date, sub_counter):
+def insert_new_user(first_name, last_name, username, id):
     """Добавляет пользователя в базу данных"""
     try:
-        with sqlite3.connect(r'database/users.db') as db:
-            cursor = db.cursor()
-            cursor.execute(
-                """INSERT INTO users(id, user_id, user_name, count, date, sub_counter) VALUES(?, ?, ?, ?, ?, ?)""",
-                (None, user_id, user_name, 0, date, sub_counter))
-            return 1  # if the user was added
+        cursor = connect()
+        cursor[0].execute(
+            """INSERT INTO Users(id, first_name, last_name, nickname, user_id) VALUES(%s, %s, %s, %s, %s)""",
+            (None, first_name, last_name, username, id))
+        cursor[1].commit()
+        return 1  # if the user was added
     except Exception as err:
         return 2  # if the user wasn't added
 
 
-def get_subcribe(user_id):
+def update_subscription(user_id, expired_date, price):
     '''Возвращает время подписки и счетчик купленных подписок конкретного пользователя'''
     try:
-        with sqlite3.connect(r'database/users.db') as db:
-            cursor = db.cursor()
-            cursor.execute(f"""SELECT count, sub_counter  FROM users WHERE user_id={user_id}""",)
-            return cursor.fetchone()  #
+        cursor = connect()
+        cursor[0].execute(f"""UPDATE Transactions SET expired_date={expired_date}, price={price} WHERE user_id={user_id}""")
+        cursor[1].commit()
     except Exception as err:
+        print(err)
         return 2  #
 
-def update_subcribe(user_id, new_count, sub_counter):
-    '''Обновляем подписку'''
+
+def insert_subscription(user_id, expired_date, trial_request, price):
+    '''Добавить подписку'''
     try:
-        with sqlite3.connect(r'database/users.db') as db:
-            cursor = db.cursor()
-            cursor.execute(f"""UPDATE users SET count={new_count},sub_counter={sub_counter} WHERE user_id={user_id}""",)
+        cursor = connect()
+        cursor[0].execute(f"""INSERT INTO Transactions(id, user_id, expired_date, trial_request, price) VALUES(%s, %s, %s, %s, %s)""",
+                          (None, user_id, expired_date, trial_request, price))
+        cursor[1].commit()
     except Exception as err:
-        return 2
+        return err
 
 
-def check_subcribe(user_id):
+def check_subscription(user_id):
     '''Проверяем есть у пользователя активная подписка'''
     try:
-        with sqlite3.connect(r'database/users.db') as db:
-            cursor = db.cursor()
-            cursor.execute(f"""SELECT count FROM users WHERE user_id={user_id}""",)
-            if int(cursor.fetchone()[0]) > int(time.time()):
-                return True  # У пользователя есть подписка
-            else:
-                return False  # У пользователя нет подписки
-
-    except Exception as err:
+        cursor = connect()
+        cursor[0].execute(f"""SELECT expired_date, trial_request FROM Transactions WHERE user_id={user_id}""",)
+        all =  cursor[0].fetchone()
+        if all[1] == True:  # Есть ли у пользователя пробная подписка
+            cursor[0].execute(f"UPDATE Transactions SET trial_request = {False} WHERE user_id={user_id}")
+            cursor[1].commit()
+            return 'Test'
+        elif int(all[0]) > int(time.time()):  # Есть ли подписка
+            return True  # У пользователя есть подписка
+        elif int(all[0]) > 0:
+            return 3
+        else:
+            return False  # У пользователя нет подписки
+    except Exception as err:  # Пользователь не зарегестриован
         return 2  # if the user wasn't added
 
