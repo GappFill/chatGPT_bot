@@ -41,7 +41,6 @@ async def start(message: types.Message):
                            parse_mode='html', )
 
     work_db.insert_new_user(message.from_user.first_name, message.from_user.last_name, message.from_user.username, message.from_user.id)  # Записывает пользователя ы базу данных
-    work_db.insert_subscription(message.from_user.id, 0, True, 0)
 
 
 async def pay(message: types.Message):  # Функция оплаты платежа
@@ -73,14 +72,14 @@ async def process_pay(message: types.Message):
 
 async def bot_answer_from_openai(message: types.Message):
     response = work_db.check_subscription(message.from_user.id)
-    if response == 1:
-        msg_stiker = await bot.send_sticker(message.chat.id,
-                                     'CAACAgIAAxkBAAEGRIFjYDB2O_zAbzSB6kCUIrfPqdk8TgACIwADKA9qFCdRJeeMIKQGKgQ')
-        await bot.send_message(chat_id=message.from_user.id,
-                               text=chatGPT_response(message.text))
-        await msg_stiker.delete()
 
-    elif response == 0:
+    if response == 2:  # Пользователь написал не /start
+        await start(message)
+
+    elif response == 3:  # У пользователя есть подписка которая закончилась
+        await bot.send_message(message.from_user.id,
+                               '🥸 Ваша подписка закончилась!\n Продлите подписку, чтобы пользоваться поиском нового поколения',
+                               parse_mode='html')
         msg_stiker = await bot.send_sticker(message.chat.id,
                                             'CAACAgIAAxkBAAEGRIFjYDB2O_zAbzSB6kCUIrfPqdk8TgACIwADKA9qFCdRJeeMIKQGKgQ')
         await bot.send_message(chat_id=message.from_user.id,
@@ -88,16 +87,18 @@ async def bot_answer_from_openai(message: types.Message):
         await msg_stiker.delete()
         await pay(message)
 
-    elif response == 3:
-        await bot.send_message(message.from_user.id, '🥸 Ваша подписка закончилась!\n Продлите подписку, чтобы пользоваться поиском нового поколения',
-                               parse_mode='html')
-        await pay(message)
+    else:
+        msg_stiker = await bot.send_sticker(message.chat.id,
+                                            'CAACAgIAAxkBAAEGRIFjYDB2O_zAbzSB6kCUIrfPqdk8TgACIwADKA9qFCdRJeeMIKQGKgQ')
+        if response == 1:  # У пользователя есть подписка
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text=chatGPT_response(message.text))
 
-    elif response == 2:
-        await start(message)
-
-
-
+        elif response == 0:  # У пользователя нет подписки
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text=useful.create_mask(chatGPT_response(message.text)))
+            await pay(message)
+        await msg_stiker.delete()
 
 
 def register_handlers_client(dp : Dispatcher):
