@@ -1,10 +1,8 @@
 import useful
 from create_bot import bot, dp
 from aiogram import types, Dispatcher
-from datetime import datetime
 import openai
 import work_db
-from keyboard import kb
 from useful import days_to_seconds, chatGPT_response, create_mask
 import time
 
